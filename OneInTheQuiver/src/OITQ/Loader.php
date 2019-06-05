@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace oitq;
+namespace OITQ;
 
 use pocketmine\entity\projectile\Arrow;
 use pocketmine\event\block\BlockBreakEvent;

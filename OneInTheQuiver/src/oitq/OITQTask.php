@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace oitq;
+namespace OITQ;
 
 use pocketmine\scheduler\Task;
 use pocketmine\utils\TextFormat;
