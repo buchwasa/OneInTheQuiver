@@ -1,12 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace OITQ;
+namespace oitq;
 
-use OITQ\Tasks\CheckPlayersTask;
-use OITQ\Tasks\RespawnTask;
-use OITQ\Tasks\StartGameTask;
-use pocketmine\entity\Arrow;
+use pocketmine\entity\projectile\Arrow;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\block\BlockPlaceEvent;
 use pocketmine\event\entity\EntityDamageByChildEntityEvent;
@@ -20,89 +17,37 @@ use pocketmine\event\player\PlayerPreLoginEvent;
 use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\event\player\PlayerRespawnEvent;
 use pocketmine\item\Item;
+use pocketmine\level\Level;
 use pocketmine\Player;
 use pocketmine\plugin\PluginBase;
 use pocketmine\utils\TextFormat;
 
 class Loader extends PluginBase implements Listener{
 
-	public $hasGameStarted = false;
+	/** @var int */
+	public $gameStatus = OITQTask::WAITING;
+	/** @var Player[] */
 	public $queue = [];
+	/** @var array */
 	public $kills = [];
-	public $deaths = [];
+	/** @var Level */
+	public $map;
 
 	public function onEnable(){
+		$this->saveDefaultConfig();
+		$this->map = $this->getServer()->getLevelByName((string)$this->getConfig()->get("map"));
 		$this->getServer()->getPluginManager()->registerEvents($this, $this);
-
-		$this->getServer()->loadLevel("hub");
-		$this->getServer()->loadLevel("game");
-
-		$this->startCheckPlayersTask();
-
-		$this->sendDifficulty(0);
-
+		$this->getScheduler()->scheduleRepeatingTask(new OITQTask($this), 20);
 	}
 
-	/**
-	 * @return int
-	 */
-	public function startCheckPlayersTask() : int{
-		return $this->getServer()->getScheduler()->scheduleRepeatingTask(new CheckPlayersTask($this), 25)->getTaskId();
-	}
-
-	/**
-	 * @param $difficulty
-	 */
-	public function sendDifficulty($difficulty){
-		$this->getServer()->setConfigInt("difficulty", $difficulty);
-	}
-
-	/**
-	 * @param Player $player
-	 */
 	public function sendKit(Player $player){
-		$player->getInventory()->clearAll();
-		$player->getInventory()->addItem(Item::get(Item::IRON_AXE, 0, 1));
-		$player->getInventory()->addItem(Item::get(Item::BOW, 0, 1));
-		$player->getInventory()->addItem(Item::get(Item::ARROW, 0, 1));
+		$inventory = $player->getInventory();
+		$inventory->clearAll();
+		$inventory->addItem(Item::get(Item::IRON_AXE, 0, 1));
+		$inventory->addItem(Item::get(Item::BOW, 0, 1));
+		$inventory->addItem(Item::get(Item::ARROW, 0, 1));
 	}
 
-	/**
-	 * @return CheckPlayersTask
-	 */
-	public function getTimer() : CheckPlayersTask{
-		$task = new CheckPlayersTask($this);
-
-		return $task;
-	}
-
-	/**
-	 * @param Player $player
-	 *
-	 * @return mixed
-	 */
-	public function getDeaths(Player $player){
-		if(!isset($this->deaths[$player->getName()])){
-			$this->deaths[$player->getName()] = 0;
-		}
-
-		return $this->deaths[$player->getName()];
-	}
-
-	/**
-	 * @param Player $player
-	 */
-	public function addDeath(Player $player){
-		if(isset($this->deaths[$player->getName()])){
-			$this->deaths[$player->getName()] = $this->deaths[$player->getName()] + 1;
-		}
-	}
-
-	/**
-	 * @param Player $player
-	 *
-	 * @return mixed
-	 */
 	public function getKills(Player $player){
 		if(!isset($this->kills[$player->getName()])){
 			$this->kills[$player->getName()] = 0;
@@ -111,19 +56,13 @@ class Loader extends PluginBase implements Listener{
 		return $this->kills[$player->getName()];
 	}
 
-	/**
-	 * @param PlayerJoinEvent $event
-	 */
 	public function handleJoin(PlayerJoinEvent $event){
 		$player = $event->getPlayer();
 		if(!isset($this->queue[$player->getName()])){
-			$this->queue[$player->getName()] = $event->getPlayer()->getName();
+			$this->queue[$player->getName()] = $player;
 		}
 	}
 
-	/**
-	 * @param PlayerQuitEvent $event
-	 */
 	public function handleQuit(PlayerQuitEvent $event){
 		$player = $event->getPlayer();
 		if(isset($this->queue[$player->getName()])){
@@ -131,41 +70,22 @@ class Loader extends PluginBase implements Listener{
 		}
 	}
 
-	/**
-	 * @param PlayerPreLoginEvent $event
-	 */
 	public function handlePreLogin(PlayerPreLoginEvent $event){
 		$player = $event->getPlayer();
-		if($player->getName() === "TheAppleGamerYT"){
-			$player->setDisplayName("AppleDevelops");
-			$player->setNameTag("AppleDevelops");
-		}
 
-		if($this->hasGameStarted === true){
+		if($this->gameStatus > OITQTask::COUNTDOWN){
 			$player->kick("The game has already started!", false);
 		}
 	}
 
-	/**
-	 * @param BlockBreakEvent $event
-	 */
 	public function handleBreak(BlockBreakEvent $event){
 		$event->setCancelled();
 	}
 
-
-	//GAME EVENTS
-
-	/**
-	 * @param BlockPlaceEvent $event
-	 */
 	public function handlePlace(BlockPlaceEvent $event){
 		$event->setCancelled();
 	}
 
-	/**
-	 * @param ProjectileHitEvent $event
-	 */
 	public function handleProjectileHit(ProjectileHitEvent $event){
 		$arrow = $event->getEntity();
 		if($arrow instanceof Arrow){
@@ -173,25 +93,19 @@ class Loader extends PluginBase implements Listener{
 		}
 	}
 
-	/**
-	 * @param PlayerRespawnEvent $event
-	 */
 	public function handleRespawn(PlayerRespawnEvent $event){
 		$player = $event->getPlayer();
-		if($this->hasGameStarted === true){
-			$this->getServer()->getScheduler()->scheduleDelayedTask(new RespawnTask($this, $player), 1);
+		if($this->gameStatus > OITQTask::COUNTDOWN){
+			$player->teleport($this->map->getSafeSpawn());
+			$this->sendKit($player);
 		}
 	}
 
-	/**
-	 * @param PlayerDeathEvent $event
-	 */
 	public function handleDeath(PlayerDeathEvent $event){
 		$player = $event->getPlayer();
 		$event->setDrops([]);
 		$cause = $player->getLastDamageCause();
 
-		$this->addDeath($player);
 		$event->setDeathMessage(TextFormat::AQUA . $player->getDisplayName() . " has been killed.");
 
 		if($cause instanceof EntityDamageByEntityEvent){
@@ -202,53 +116,30 @@ class Loader extends PluginBase implements Listener{
 		}
 	}
 
-	/**
-	 * @param Player $player
-	 */
 	public function sendKillItem(Player $player){
-		$player->getInventory()->addItem(Item::get(Item::ARROW, 0, 1));
-		$this->addKill($player);
-	}
-
-	/**
-	 * @param Player $player
-	 */
-	public function addKill(Player $player){
 		if(isset($this->kills[$player->getName()])){
 			$this->kills[$player->getName()] = $this->kills[$player->getName()] + 1;
 		}
+
+		$player->getInventory()->addItem(Item::get(Item::ARROW, 0, 1));
 	}
 
-	/**
-	 * @param EntityDamageEvent $event
-	 */
 	public function handleDamage(EntityDamageEvent $event){
-		if($event instanceof EntityDamageByEntityEvent){
-			$damager = $event->getDamager();
-			if($this->hasGameStarted === true || $this->getGameTimer()->s2s <= 890){
+		if($this->gameStatus === OITQTask::GAME){
+			if($event instanceof EntityDamageByChildEntityEvent){
+				$damager = $event->getDamager();
+				$arrow = $event->getChild();
 				if($damager instanceof Player){
-					if($event instanceof EntityDamageByChildEntityEvent){
-						$arrow = $event->getChild();
-						if($arrow instanceof Arrow){
-							$event->getEntity()->attack(20, new EntityDamageEvent($event->getEntity(), EntityDamageEvent::CAUSE_PROJECTILE, 20));
-							if($damager !== $event->getEntity()){
-								$this->sendKillItem($damager);
-							}
+					if($arrow instanceof Arrow){
+						$event->getEntity()->attack(new EntityDamageEvent($event->getEntity(), EntityDamageEvent::CAUSE_PROJECTILE, 2000));
+						if($damager !== $event->getEntity()){
+							$this->sendKillItem($damager);
 						}
 					}
 				}
-			}else{
-				$event->setCancelled();
 			}
+		}else{
+			$event->setCancelled();
 		}
-	}
-
-	/**
-	 * @return StartGameTask
-	 */
-	public function getGameTimer() : StartGameTask{
-		$task = new StartGameTask($this);
-
-		return $task;
 	}
 }
