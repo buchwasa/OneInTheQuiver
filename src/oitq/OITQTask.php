@@ -1,8 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace OITQ;
+namespace oitq;
 
+use pocketmine\Player;
 use pocketmine\scheduler\Task;
 use pocketmine\utils\TextFormat;
 use function count;
@@ -22,11 +23,11 @@ class OITQTask extends Task{
 	public const ENDING = 3;
 
 	/** @var int */
-	private $countdown = 31;
+	private $countdown = 16;
 	/** @var int */
 	private $game = 901;
 	/** @var int */
-	private $shutdownTimer = 21;
+	private $shutdownTimer = 6;
 
 	public function __construct(Loader $plugin){
 		$this->plugin = $plugin;
@@ -35,7 +36,7 @@ class OITQTask extends Task{
 	public function onRun(int $currentTick){
 		switch($this->plugin->gameStatus){
 			case self::WAITING:
-				if(count($this->plugin->queue) >= 2){
+				if(count($this->plugin->gameData) >= 2){
 					$this->plugin->gameStatus = self::COUNTDOWN;
 				}else{
 					$this->plugin->getServer()->broadcastTip("Waiting for players...");
@@ -55,31 +56,41 @@ class OITQTask extends Task{
 
 	private function handleCountdown(){
 		$this->countdown--;
-		if(count($this->plugin->queue) < 2){
+		if(count($this->plugin->gameData) < 2){
 			$this->countdown = 31;
 			$this->plugin->gameStatus = self::WAITING;
 		}
 
-		foreach($this->plugin->queue as $p){
+		/** @var Player $p */
+		foreach($this->plugin->gameData["player"] as $p){
 			$p->sendPopup("Starting in " . $this->countdown);
 			if($this->countdown === 0){
 				$p->teleport($this->plugin->map->getSafeSpawn());
 				$this->plugin->sendKit($p);
+				$this->plugin->gameStatus = self::GAME;
 			}
 		}
 	}
 
 	private function handleGame(){
 		$this->game--;
-		if($this->game === 0){
+		if($this->game === 0 || count($this->plugin->gameData) < 1){
 			$this->plugin->getServer()->broadcastMessage("Game ended, no one won!");
 			$this->plugin->gameStatus = self::ENDING;
+		}elseif(count($this->plugin->gameData) === 1){
+			/** @var Player $p */
+			foreach($this->plugin->gameData["player"] as $p){
+				$this->plugin->getServer()->broadcastMessage(TextFormat::BOLD . TextFormat::AQUA . $p->getDisplayName() . " won the game!");
+				$this->plugin->gameStatus = self::ENDING;
+			}
 		}
 
-		foreach($this->plugin->queue as $p){
-			$p->sendTip("Kills: " . $this->plugin->getKills($p));
+		/** @var Player $p */
+		foreach($this->plugin->gameData["player"] as $p){
+			$gameData = $this->plugin->gameData[$p->getName()];
+			$p->sendTip(TextFormat::RED . "Eliminations: " . TextFormat::GOLD . $gameData["eliminations"]);
 
-			if($this->plugin->kills[$p->getName()] >= 20){
+			if($gameData["eliminations"] >= 20){
 				$this->plugin->getServer()->broadcastMessage(TextFormat::BOLD . TextFormat::AQUA . $p->getDisplayName() . " won the game!");
 				$this->plugin->gameStatus = self::ENDING;
 			}
@@ -89,9 +100,6 @@ class OITQTask extends Task{
 	private function handleEnding(){
 		$this->shutdownTimer--;
 		switch($this->shutdownTimer){
-			case 20:
-				$this->plugin->getServer()->broadcastMessage("Server will shutdown in 20 seconds.");
-				break;
 			case 5:
 			case 4:
 			case 3:
