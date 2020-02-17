@@ -51,9 +51,10 @@ class Loader extends PluginBase implements Listener{
 	public function handleJoin(PlayerJoinEvent $event){
 		$player = $event->getPlayer();
 
-		$dataArray = $this->gameData[$player->getName()];
-		$dataArray["player"] = $player;
-		$dataArray["eliminations"] = 0;
+		$dataArray = $this->gameData[$player->getName()] = [
+			"player" => $player,
+			"eliminations" => 0
+		];
 
 		$pk = new GameRulesChangedPacket();
 		$pk->gameRules = ["doimmediaterespawn" => [1, true]];

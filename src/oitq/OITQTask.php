@@ -62,11 +62,11 @@ class OITQTask extends Task{
 		}
 
 		/** @var Player $p */
-		foreach($this->plugin->gameData["player"] as $p){
-			$p->sendPopup("Starting in " . $this->countdown);
+		foreach($this->plugin->gameData as $gameData){
+			$gameData["player"]->sendPopup("Starting in " . $this->countdown);
 			if($this->countdown === 0){
-				$p->teleport($this->plugin->map->getSafeSpawn());
-				$this->plugin->sendKit($p);
+				$gameData["player"]->teleport($this->plugin->map->getSafeSpawn());
+				$this->plugin->sendKit($gameData["player"]);
 				$this->plugin->gameStatus = self::GAME;
 			}
 		}
@@ -79,19 +79,19 @@ class OITQTask extends Task{
 			$this->plugin->gameStatus = self::ENDING;
 		}elseif(count($this->plugin->gameData) === 1){
 			/** @var Player $p */
-			foreach($this->plugin->gameData["player"] as $p){
-				$this->plugin->getServer()->broadcastMessage(TextFormat::BOLD . TextFormat::AQUA . $p->getDisplayName() . " won the game!");
+			foreach($this->plugin->gameData as $gameData){
+				$this->plugin->getServer()->broadcastMessage(TextFormat::BOLD . TextFormat::AQUA . $gameData["player"]->getDisplayName() . " won the game!");
 				$this->plugin->gameStatus = self::ENDING;
 			}
 		}
 
 		/** @var Player $p */
-		foreach($this->plugin->gameData["player"] as $p){
-			$gameData = $this->plugin->gameData[$p->getName()];
-			$p->sendTip(TextFormat::RED . "Eliminations: " . TextFormat::GOLD . $gameData["eliminations"]);
+		foreach($this->plugin->gameData as $gameData){
+			$eliminations = $this->plugin->gameData[$p->getName()]["eliminations"];
+			$gameData->sendTip(TextFormat::RED . "Eliminations: " . TextFormat::GOLD . $eliminations);
 
-			if($gameData["eliminations"] >= 20){
-				$this->plugin->getServer()->broadcastMessage(TextFormat::BOLD . TextFormat::AQUA . $p->getDisplayName() . " won the game!");
+			if($eliminations >= 20){
+				$this->plugin->getServer()->broadcastMessage(TextFormat::BOLD . TextFormat::AQUA . $gameData["player"]->getDisplayName() . " won the game!");
 				$this->plugin->gameStatus = self::ENDING;
 			}
 		}
