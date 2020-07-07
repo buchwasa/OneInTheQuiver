@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace oitq;
 
-use pocketmine\Player;
+use pocketmine\player\Player;
 use pocketmine\scheduler\Task;
 use pocketmine\utils\TextFormat;
 use function count;
@@ -23,17 +23,17 @@ class OITQTask extends Task{
 	public const ENDING = 3;
 
 	/** @var int */
-	private $countdown = 16;
+	private $countdown = 15;
 	/** @var int */
-	private $game = 901;
+	private $game = 900;
 	/** @var int */
-	private $shutdownTimer = 6;
+	private $shutdownTimer = 5;
 
 	public function __construct(Loader $plugin){
 		$this->plugin = $plugin;
 	}
 
-	public function onRun(int $currentTick){
+	public function onRun() : void{
 		switch($this->plugin->gameStatus){
 			case self::WAITING:
 				if(count($this->plugin->gameData) >= 2){
@@ -54,8 +54,7 @@ class OITQTask extends Task{
 		}
 	}
 
-	private function handleCountdown(){
-		$this->countdown--;
+	private function handleCountdown() : void{
 		if(count($this->plugin->gameData) < 2){
 			$this->countdown = 31;
 			$this->plugin->gameStatus = self::WAITING;
@@ -70,10 +69,11 @@ class OITQTask extends Task{
 				$this->plugin->gameStatus = self::GAME;
 			}
 		}
+
+		$this->countdown--;
 	}
 
-	private function handleGame(){
-		$this->game--;
+	private function handleGame() : void{
 		if($this->game === 0 || count($this->plugin->gameData) < 1){
 			$this->plugin->getServer()->broadcastMessage("Game ended, no one won!");
 			$this->plugin->gameStatus = self::ENDING;
@@ -95,10 +95,11 @@ class OITQTask extends Task{
 				$this->plugin->gameStatus = self::ENDING;
 			}
 		}
+
+		$this->game--;
 	}
 
-	private function handleEnding(){
-		$this->shutdownTimer--;
+	private function handleEnding() : void{
 		switch($this->shutdownTimer){
 			case 5:
 			case 4:
@@ -111,5 +112,7 @@ class OITQTask extends Task{
 				$this->plugin->getServer()->shutdown();
 				break;
 		}
+
+		$this->shutdownTimer--;
 	}
 }
