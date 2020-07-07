@@ -5,7 +5,6 @@ namespace oitq\game;
 
 use oitq\Loader;
 use pocketmine\scheduler\Task;
-use pocketmine\utils\TextFormat as TF;
 use function count;
 
 class GameTask extends Task{
