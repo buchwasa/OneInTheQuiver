@@ -1,1 +1,10 @@
+#The world that the game will use, case sensitive.
 map: game
+#The max amount of eliminations before the game ends.
+max-eliminations: 20
+#Timers for each game status.
+timers:
+  countdown: 15
+  game: 900 # 15 minutes
+  # Reset is when the game ends and as of right now, shuts down the server.
+  reset: 5
