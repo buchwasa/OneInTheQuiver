@@ -36,17 +36,17 @@ class GameTask extends Task{
 	public function onRun() : void{
 		foreach($this->plugin->getGameSessions() as $gameSession){
 			if($this->getGameStatus() === GameStatus::COUNTDOWN){
-				$gameSession->getPlayer()->sendPopup("Starting in " . $this->countdown);
+				$gameSession->getPlayer()->sendTip($this->plugin->getMessage("countdown-tip", ["{TIME}" => $this->countdown]));
 				if($this->countdown === 0){
 					$gameSession->getPlayer()->teleport($this->plugin->getMap()->getSafeSpawn()); //Used for "spawnpoint" TODO: Make this into actual configurable spawnpoints.
 					$this->plugin->sendKit($gameSession->getPlayer());
 					$this->gameStatus = GameStatus::GAME;
 				}
 			}elseif($this->getGameStatus() === GameStatus::GAME){
-				$gameSession->getPlayer()->sendTip(TF::RED . "Eliminations: " . TF::GOLD . $gameSession->getEliminations());
+				$gameSession->getPlayer()->sendTip($this->plugin->getMessage("eliminations-tip", ["{ELIMINATIONS}" => $gameSession->getEliminations()]));
 
 				if($gameSession->getEliminations() >= $this->plugin->getMaxEliminations() || count($this->plugin->getGameSessions()) === 1){
-					$this->plugin->getServer()->broadcastMessage(TF::BOLD . TF::AQUA . $gameSession->getPlayer()->getDisplayName() . " won the game!"); //TODO: Broadcast to world.
+					$this->plugin->getServer()->broadcastMessage($this->plugin->getMessage("player-won", ["{DISPLAY_NAME}" => $gameSession->getPlayer()->getDisplayName()])); //TODO: Broadcast to world.
 					$this->gameStatus = GameStatus::RESET;
 				}
 			}
@@ -57,7 +57,7 @@ class GameTask extends Task{
 				if(count($this->plugin->getGameSessions()) >= 2){
 					$this->gameStatus = GameStatus::COUNTDOWN;
 				}else{
-					$this->plugin->getServer()->broadcastTip("Waiting for players..."); //TODO: Broadcast to world.
+					$this->plugin->getServer()->broadcastTip($this->plugin->getMessage("waiting-tip")); //TODO: Broadcast to world.
 				}
 				break;
 			case GameStatus::COUNTDOWN:
@@ -70,7 +70,7 @@ class GameTask extends Task{
 				break;
 			case GameStatus::GAME:
 				if($this->game === 0 || count($this->plugin->getGameSessions()) < 1){
-					$this->plugin->getServer()->broadcastMessage("Game ended, no one won!"); //TODO: Broadcast to world.
+					$this->plugin->getServer()->broadcastMessage($this->plugin->getMessage("no-one-won")); //TODO: Broadcast to world.
 					$this->gameStatus = GameStatus::RESET;
 				}
 

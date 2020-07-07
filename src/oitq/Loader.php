@@ -8,6 +8,7 @@ use oitq\game\GameTask;
 use pocketmine\item\VanillaItems;
 use pocketmine\player\Player;
 use pocketmine\plugin\PluginBase;
+use pocketmine\utils\TextFormat;
 use pocketmine\world\World;
 
 class Loader extends PluginBase{
@@ -59,6 +60,11 @@ class Loader extends PluginBase{
 
 	public function getMaxEliminations() : int{
 		return (int)$this->getConfig()->get("max-eliminations");
+	}
+
+	public function getMessage(string $name, array $variables = []){
+		$colorCodes = str_replace("&", TextFormat::ESCAPE, (string)$this->getConfig()->get("messages")[$name]);
+		return str_replace(array_keys($variables), $variables, $colorCodes);
 	}
 
 	public function getCountdownTimer() : int{

@@ -17,7 +17,6 @@ use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\event\player\PlayerRespawnEvent;
 use pocketmine\item\VanillaItems;
 use pocketmine\player\Player;
-use pocketmine\utils\TextFormat;
 
 class EventListener implements Listener{
 	/** @var Loader */
@@ -75,7 +74,7 @@ class EventListener implements Listener{
 			if($damager instanceof Player && $damager !== $player){
 				$damagerSession = $this->plugin->getGameSession($damager);
 				if($damagerSession !== null){
-					$damager->sendPopup(TextFormat::RED . "Eliminated " . $player->getDisplayName());
+					$damager->sendPopup($this->plugin->getMessage("eliminated-player-tip", ["{VICTIM_NAME}" => $player->getDisplayName()]));
 					$damagerSession->addElimination();
 					$player->getInventory()->addItem(VanillaItems::ARROW());
 				}

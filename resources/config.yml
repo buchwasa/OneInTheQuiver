@@ -2,6 +2,13 @@
 map: game
 #The max amount of eliminations before the game ends.
 max-eliminations: 20
+messages:
+  waiting-tip: "Waiting for players..."
+  countdown-tip: "Starting in: {TIME}"
+  eliminated-player-tip: "&cEliminated {VICTIM_NAME}"
+  eliminations-tip: "&cEliminations: &6{ELIMINATIONS}"
+  no-one-won: "Game over, no one won."
+  player-won: "{DISPLAY_NAME} won the game!"
 #Timers for each game status.
 timers:
   countdown: 15
